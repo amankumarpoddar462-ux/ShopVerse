@@ -1,0 +1,114 @@
+{% extends "base/panel_base.html" %}
+{% load static %}
+
+{% block page_title %}Rider Profile: {{ partner.user.get_full_name|default:partner.user.username }}{% endblock %}
+{% block page_subtitle %}Complete rider account, vehicle, address, KYC, payout, and delivery history{% endblock %}
+
+{% block panel_content %}
+<div class="admin-detail-actions">
+    <a href="/admin-panel/delivery-partners/" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Back to Riders
+    </a>
+    <a href="/admin-panel/delivery-partners/{{ partner.id }}/toggle-status/" class="btn btn-{% if partner.is_approved %}secondary{% else %}primary{% endif %}">
+        {% if partner.is_approved %}
+        <i class="fa-solid fa-ban" style="color: #ef4444;"></i> Suspend Rider Account
+        {% else %}
+        <i class="fa-solid fa-check" style="color: #10b981;"></i> Approve Rider
+        {% endif %}
+    </a>
+</div>
+
+<div class="admin-detail-layout" style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+    <section class="glass-card admin-detail-card" style="padding: 24px; height: fit-content;">
+        <h2>{{ partner.user.get_full_name|default:partner.user.username }}</h2>
+        <div class="admin-detail-statuses">
+            <span class="badge badge-{% if partner.is_approved %}success{% else %}danger{% endif %}">
+                {% if partner.is_approved %}Approved{% else %}Suspended{% endif %}
+            </span>
+            <span class="badge" style="background: {% if partner.is_online %}rgba(16, 185, 129, 0.15){% else %}rgba(100, 116, 139, 0.15){% endif %}; color: {% if partner.is_online %}#10b981{% else %}var(--text-muted){% endif %};">
+                {% if partner.is_online %}Online{% else %}Offline{% endif %}
+            </span>
+        </div>
+
+        <h3>Account & Contact</h3>
+        <dl class="admin-profile-fields">
+            <dt>Full name</dt><dd>{{ partner.user.get_full_name|default:partner.user.username }}</dd>
+            <dt>Username</dt><dd>{{ partner.user.username }}</dd>
+            <dt>Login account</dt><dd>{% if partner.user.is_active %}Active{% else %}Disabled{% endif %}</dd>
+            <dt>Email verified</dt><dd>{% if partner.user.is_verified %}Yes{% else %}No{% endif %}</dd>
+            <dt>Email</dt><dd>{{ partner.user.email|default:"Not provided" }}</dd>
+            <dt>Phone</dt><dd>{{ partner.user.phone|default:"Not provided" }}</dd>
+            <dt>Account created</dt><dd>{{ partner.user.date_joined|date:"d M Y, h:i A" }}</dd>
+            <dt>Rider registered</dt><dd>{{ partner.created_at|date:"d M Y, h:i A" }}</dd>
+            <dt>Last login</dt><dd>{{ partner.user.last_login|date:"d M Y, h:i A"|default:"Never" }}</dd>
+        </dl>
+
+        <h3>Vehicle & License</h3>
+        <dl class="admin-profile-fields">
+            <dt>Vehicle type</dt><dd>{{ partner.get_vehicle_type_display }}</dd>
+            <dt>Registration number</dt><dd>{{ partner.vehicle_number|default:"Not provided" }}</dd>
+            <dt>Driving license</dt><dd>{{ partner.driving_license_no|default:"Not provided" }}</dd>
+            <dt>Customer rating</dt><dd><strong style="color: #f59e0b;">★ {{ partner.rating }}</strong></dd>
+        </dl>
+
+        <h3>Address</h3>
+        <dl class="admin-profile-fields">
+            <dt>Street address</dt><dd>{{ partner.address|default:"Not provided" }}</dd>
+            <dt>City / State</dt><dd>{{ partner.city|default:"-" }}, {{ partner.state|default:"-" }}</dd>
+            <dt>PIN code</dt><dd>{{ partner.pincode|default:"Not provided" }}</dd>
+            <dt>Current coordinates</dt><dd>{{ partner.current_lat|floatformat:6 }}, {{ partner.current_lng|floatformat:6 }}</dd>
+        </dl>
+
+        <h3>Payout Details</h3>
+        <dl class="admin-profile-fields">
+            <dt>Bank</dt><dd>{{ partner.bank_name|default:"Not provided" }}</dd>
+            <dt>Account number</dt><dd>{{ partner.account_number|default:"Not provided" }}</dd>
+            <dt>IFSC</dt><dd>{{ partner.ifsc_code|default:"Not provided" }}</dd>
+            <dt>UPI ID</dt><dd>{{ partner.upi_id|default:"Not provided" }}</dd>
+        </dl>
+
+        <h3>KYC Document</h3>
+        {% if partner.kyc_document %}
+        <a class="btn btn-secondary" href="{{ partner.kyc_document.url }}" target="_blank" rel="noopener noreferrer">
+            <i class="fa-solid fa-file-shield"></i> View rider KYC document
+        </a>
+        {% else %}
+        <p class="admin-detail-muted">No KYC document uploaded.</p>
+        {% endif %}
+    </section>
+
+    <section class="glass-card admin-detail-card" style="padding: 24px;">
+        <h2><i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i> Assigned Delivery History ({{ deliveries|length }})</h2>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Assigned On</th>
+                        <th>Customer</th>
+                        <th>OTP Handover</th>
+                        <th>Rider Earning</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in deliveries %}
+                    <tr>
+                        <td><strong style="color: var(--primary);">#{{ d.order_number }}</strong></td>
+                        <td>{{ d.created_at|date:"d M Y" }}</td>
+                        <td>{{ d.customer.get_full_name|default:d.customer_name }}</td>
+                        <td>{{ d.delivery_otp|default:"-" }}</td>
+                        <td><strong style="color: #10b981;">₹{{ d.delivery_partner_earning|default:"0.00" }}</strong></td>
+                        <td><span class="badge badge-{% if d.status == 'delivered' %}success{% elif d.status == 'cancelled' %}danger{% else %}warning{% endif %}">{{ d.get_status_display }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No deliveries assigned yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "base/panel_base.html" %}
+{% load static %}
+
+{% block page_title %}Seller Profile: {{ seller.store_name }}{% endblock %}
+{% block page_subtitle %}Complete seller, business, payout, KYC, and product information{% endblock %}
+
+{% block panel_content %}
+<div class="admin-detail-actions">
+    <a href="/admin-panel/sellers/" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Back to Sellers
+    </a>
+    <a href="/admin-panel/sellers/{{ seller.id }}/toggle-status/" class="btn btn-{% if seller.is_approved %}secondary{% else %}primary{% endif %}">
+        {% if seller.is_approved %}
+        <i class="fa-solid fa-ban" style="color: #ef4444;"></i> Suspend Vendor Store
+        {% else %}
+        <i class="fa-solid fa-check" style="color: #10b981;"></i> Approve Store
+        {% endif %}
+    </a>
+</div>
+
+<div class="admin-detail-layout" style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+    <section class="glass-card admin-detail-card" style="padding: 24px; height: fit-content;">
+        <div class="admin-detail-profile-heading">
+            {% if seller.logo_url %}
+            <img src="{{ seller.logo_url }}" alt="{{ seller.store_name }} logo">
+            {% endif %}
+            <div>
+                <h2>{{ seller.store_name }}</h2>
+                <p>@{{ seller.store_slug }}</p>
+                <span class="badge badge-{% if seller.is_approved %}success{% else %}danger{% endif %}">
+                    {% if seller.is_approved %}Approved{% else %}Suspended{% endif %}
+                </span>
+                <span class="badge badge-{% if seller.kyc_status == 'verified' %}success{% else %}warning{% endif %}">
+                    KYC: {{ seller.get_kyc_status_display }}
+                </span>
+            </div>
+        </div>
+
+        <h3>Owner & Contact</h3>
+        <dl class="admin-profile-fields">
+            <dt>Full name</dt><dd>{{ seller.user.get_full_name|default:seller.user.username }}</dd>
+            <dt>Username</dt><dd>{{ seller.user.username }}</dd>
+            <dt>Login account</dt><dd>{% if seller.user.is_active %}Active{% else %}Disabled{% endif %}</dd>
+            <dt>Email verified</dt><dd>{% if seller.user.is_verified %}Yes{% else %}No{% endif %}</dd>
+            <dt>Login email</dt><dd>{{ seller.user.email|default:"Not provided" }}</dd>
+            <dt>Login phone</dt><dd>{{ seller.user.phone|default:"Not provided" }}</dd>
+            <dt>Business email</dt><dd>{{ seller.email|default:"Not provided" }}</dd>
+            <dt>Business phone</dt><dd>{{ seller.phone|default:"Not provided" }}</dd>
+            <dt>Last login</dt><dd>{{ seller.user.last_login|date:"d M Y, h:i A"|default:"Never" }}</dd>
+        </dl>
+
+        <h3>Business & Tax</h3>
+        <dl class="admin-profile-fields">
+            <dt>Business address</dt><dd>{{ seller.business_address|default:"Not provided" }}</dd>
+            <dt>City / State</dt><dd>{{ seller.city|default:"-" }}, {{ seller.state|default:"-" }}</dd>
+            <dt>PIN code</dt><dd>{{ seller.pincode|default:"Not provided" }}</dd>
+            <dt>GSTIN</dt><dd>{{ seller.gst_number|default:"Not provided" }}</dd>
+            <dt>PAN</dt><dd>{{ seller.pan_number|default:"Not provided" }}</dd>
+            <dt>Commission rate</dt><dd>{{ seller.commission_rate }}%</dd>
+            <dt>Top-rated store</dt><dd>{% if seller.is_top_rated %}Yes{% else %}No{% endif %}</dd>
+            <dt>Registered</dt><dd>{{ seller.created_at|date:"d M Y, h:i A" }}</dd>
+        </dl>
+
+        <h3>Payout Details</h3>
+        <dl class="admin-profile-fields">
+            <dt>Bank</dt><dd>{{ seller.bank_name|default:"Not provided" }}</dd>
+            <dt>Account number</dt><dd>{{ seller.account_number|default:"Not provided" }}</dd>
+            <dt>IFSC</dt><dd>{{ seller.ifsc_code|default:"Not provided" }}</dd>
+            <dt>UPI ID</dt><dd>{{ seller.upi_id|default:"Not provided" }}</dd>
+        </dl>
+
+        <h3>KYC Document</h3>
+        {% if seller.kyc_document %}
+        <a class="btn btn-secondary" href="{{ seller.kyc_document.url }}" target="_blank" rel="noopener noreferrer">
+            <i class="fa-solid fa-file-shield"></i> View seller KYC document
+        </a>
+        {% else %}
+        <p class="admin-detail-muted">No KYC document uploaded.</p>
+        {% endif %}
+
+        <h3>Store Description</h3>
+        <p class="admin-detail-description">{{ seller.description|default:"No store description provided." }}</p>
+        {% if seller.banner_url %}
+        <h3>Store Banner</h3>
+        <img class="admin-detail-banner" src="{{ seller.banner_url }}" alt="{{ seller.store_name }} banner">
+        {% endif %}
+    </section>
+
+    <section class="glass-card admin-detail-card" style="padding: 24px;">
+        <h2><i class="fa-solid fa-boxes-stacked" style="color: var(--primary);"></i> Listed Products ({{ products|length }})</h2>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Item Code</th>
+                        <th>Product Title</th>
+                        <th>Base Price</th>
+                        <th>Final Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in products %}
+                    <tr>
+                        <td><span class="badge" style="font-family: monospace;">{{ p.item_code }}</span></td>
+                        <td><strong>{{ p.title|truncatechars:30 }}</strong></td>
+                        <td>₹{{ p.base_price }}</td>
+                        <td><strong style="color: var(--primary);">₹{{ p.selling_price }}</strong></td>
+                        <td>{{ p.stock }}</td>
+                        <td><span class="badge badge-{% if p.is_active %}success{% else %}danger{% endif %}">{% if p.is_active %}Live{% else %}Hidden{% endif %}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No products listed.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
