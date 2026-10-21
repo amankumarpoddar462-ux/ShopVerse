@@ -144,6 +144,16 @@ def products(request):
             for product in matches
         ]})
 
+    category_id = request.GET.get('category', '').strip()
+    subcategory_id = request.GET.get('subcategory', '').strip()
+    brand_id = request.GET.get('brand', '').strip()
+    if category_id.isdigit():
+        my_products = my_products.filter(category_id=category_id)
+    if subcategory_id.isdigit():
+        my_products = my_products.filter(subcategory_id=subcategory_id)
+    if brand_id.isdigit():
+        my_products = my_products.filter(brand_id=brand_id)
+
     if search_term:
         my_products = my_products.filter(
             Q(title__icontains=search_term) |
@@ -154,11 +164,16 @@ def products(request):
             Q(brand__name__icontains=search_term)
         )
 
-    # Delete product handler
     if request.method == "POST" and request.POST.get('action') == 'delete':
-        prod_id = request.POST.get('product_id')
-        Product.objects.filter(id=prod_id, seller=seller).delete()
-        messages.info(request, "Product deleted successfully.")
+        product_ids = request.POST.getlist('product_ids')
+        if not product_ids and request.POST.get('product_id'):
+            product_ids = [request.POST['product_id']]
+        owned_products = Product.objects.filter(seller=seller) if seller else Product.objects.none()
+        deleted_count, _ = owned_products.filter(id__in=product_ids).delete()
+        if deleted_count:
+            messages.success(request, f"{deleted_count} product(s) deleted successfully.")
+        else:
+            messages.error(request, "Select at least one of your products to delete.")
         return redirect("/seller/products/")
 
     context = {
@@ -167,6 +182,14 @@ def products(request):
         'seller': seller,
         'products': my_products,
         'search_query': query,
+        'categories': Category.objects.filter(is_active=True).order_by('name'),
+        'subcategories': SubCategory.objects.select_related('category').filter(category__is_active=True).order_by('name'),
+        'brands': Brand.objects.select_related('subcategory__category').filter(
+            Q(subcategory__isnull=True) | Q(subcategory__category__is_active=True)
+        ).order_by('name'),
+        'selected_category': category_id,
+        'selected_subcategory': subcategory_id,
+        'selected_brand': brand_id,
     }
     return render(request, "seller/products.html", context)
 

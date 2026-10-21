@@ -10,15 +10,43 @@
         <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">
             Your Product Catalog ({{ products.count }})
         </h3>
-        <a href="/seller/products/add/" class="action-pill-btn" style="background: var(--primary); color: #fff; border: none; text-decoration: none; padding: 10px 18px;">
-            <i class="fa-solid fa-plus"></i> Add New Product
-        </a>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <form id="bulkDeleteForm" method="POST" action="{% url 'seller:products' %}" onsubmit="return confirm('Delete the selected product listings?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <button id="bulkDeleteButton" type="submit" class="btn btn-secondary btn-sm" disabled style="color: #ef4444;">
+                    <i class="fa-solid fa-trash-can"></i> Delete Selected
+                </button>
+            </form>
+            <a href="/seller/products/add/" class="action-pill-btn" style="background: var(--primary); color: #fff; border: none; text-decoration: none; padding: 10px 18px;">
+                <i class="fa-solid fa-plus"></i> Add New Product
+            </a>
+        </div>
     </div>
+
+    <form method="GET" action="{% url 'seller:products' %}" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;">
+        {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+        <select name="brand" aria-label="Filter by brand" style="padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-app); color: var(--text-primary);">
+            <option value="">All Brands</option>
+            {% for brand in brands %}<option value="{{ brand.id }}" {% if selected_brand == brand.id|stringformat:"s" %}selected{% endif %}>{{ brand.name }}</option>{% endfor %}
+        </select>
+        <select name="category" aria-label="Filter by category" style="padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-app); color: var(--text-primary);">
+            <option value="">All Categories</option>
+            {% for category in categories %}<option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>{% endfor %}
+        </select>
+        <select name="subcategory" aria-label="Filter by subcategory" style="padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-app); color: var(--text-primary);">
+            <option value="">All Subcategories</option>
+            {% for subcategory in subcategories %}<option value="{{ subcategory.id }}" {% if selected_subcategory == subcategory.id|stringformat:"s" %}selected{% endif %}>{{ subcategory.category.name }} / {{ subcategory.name }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary btn-sm">Apply Filters</button>
+        <a href="{% url 'seller:products' %}" class="btn btn-secondary btn-sm" style="text-decoration: none;">Clear</a>
+    </form>
 
     <div style="overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
             <thead>
                 <tr style="background: var(--bg-app); text-align: left;">
+                    <th style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);"><input id="selectAllProducts" type="checkbox" aria-label="Select all products"></th>
                     <th style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">Product & Code</th>
                     <th style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">Category</th>
                     <th style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">Base Earning</th>
@@ -31,6 +59,7 @@
             <tbody>
                 {% for p in products %}
                     <tr onclick="if (!event.target.closest('a, button, form')) window.location.href='/seller/products/{{ p.id }}/';" style="border-bottom: 1px solid var(--border-color); cursor: pointer;">
+                        <td style="padding: 12px 14px;"><input class="product-checkbox" type="checkbox" name="product_ids" value="{{ p.id }}" form="bulkDeleteForm" aria-label="Select {{ p.title }}"></td>
                         <td style="padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
                             <img src="{{ p.main_image_url }}" alt="{{ p.title }}" style="width: 48px; height: 48px; object-fit: contain; border-radius: 8px; background: #fff; border: 1px solid var(--border-color);">
                             <div>
@@ -66,11 +95,28 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">No products listed yet. Click 'Add New Product' above.</td>
+                        <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">No products match these filters. Click 'Add New Product' above.</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+<script>
+    const productCheckboxes = document.querySelectorAll('.product-checkbox');
+    const selectAllProducts = document.getElementById('selectAllProducts');
+    const bulkDeleteButton = document.getElementById('bulkDeleteButton');
+    const updateBulkDeleteState = () => {
+        const selectedCount = document.querySelectorAll('.product-checkbox:checked').length;
+        bulkDeleteButton.disabled = selectedCount === 0;
+        bulkDeleteButton.innerHTML = `<i class="fa-solid fa-trash-can"></i> Delete Selected${selectedCount ? ` (${selectedCount})` : ''}`;
+        selectAllProducts.checked = productCheckboxes.length > 0 && selectedCount === productCheckboxes.length;
+        selectAllProducts.indeterminate = selectedCount > 0 && selectedCount < productCheckboxes.length;
+    };
+    productCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', updateBulkDeleteState));
+    selectAllProducts.addEventListener('change', () => {
+        productCheckboxes.forEach((checkbox) => { checkbox.checked = selectAllProducts.checked; });
+        updateBulkDeleteState();
+    });
+</script>
 {% endblock %}

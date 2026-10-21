@@ -145,6 +145,62 @@ class SellerEarningsTests(TestCase):
 		other_detail_response = self.client.get(reverse('seller:product_details', args=[other_product.id]))
 		self.assertEqual(other_detail_response.status_code, 404)
 
+	def test_product_filters_and_bulk_delete_are_scoped_to_current_seller(self):
+		category = Category.objects.create(name='Filtered Category', slug='filtered-category')
+		subcategory = SubCategory.objects.create(category=category, name='Filtered Subcategory', slug='filtered-subcategory')
+		brand = Brand.objects.create(subcategory=subcategory, name='Filtered Brand', slug='filtered-brand')
+		product = Product.objects.create(
+			seller=self.seller,
+			title='Filtered Product',
+			slug='filtered-product',
+			category=category,
+			subcategory=subcategory,
+			brand=brand,
+			sku='FILTERED-PRODUCT-SKU',
+			item_code='FILTERED-PRODUCT-CODE',
+			description='Product used to verify catalog filters',
+			base_price=100,
+			selling_price=120,
+		)
+		other_user = User.objects.create_user(username='bulk-other-seller', password='test-password', role='seller')
+		other_seller = SellerProfile.objects.create(
+			user=other_user,
+			store_name='Bulk Other Store',
+			store_slug='bulk-other-store',
+			phone='9876543212',
+			email='bulk-other@example.com',
+			business_address='Other seller address',
+		)
+		other_product = Product.objects.create(
+			seller=other_seller,
+			title='Other Filtered Product',
+			slug='other-filtered-product',
+			category=category,
+			sku='OTHER-FILTERED-SKU',
+			item_code='OTHER-FILTERED-CODE',
+			description='Another seller product',
+			base_price=100,
+			selling_price=120,
+		)
+
+		response = self.client.get(reverse('seller:products'), {
+			'category': category.id,
+			'subcategory': subcategory.id,
+			'brand': brand.id,
+		})
+		self.assertEqual(list(response.context['products']), [product])
+		self.assertContains(response, 'name="brand"')
+		self.assertContains(response, 'name="category"')
+		self.assertContains(response, 'name="subcategory"')
+
+		delete_response = self.client.post(reverse('seller:products'), {
+			'action': 'delete',
+			'product_ids': [product.id, other_product.id],
+		})
+		self.assertRedirects(delete_response, reverse('seller:products'))
+		self.assertFalse(Product.objects.filter(id=product.id).exists())
+		self.assertTrue(Product.objects.filter(id=other_product.id).exists())
+
 	def test_product_detail_and_edit_show_complete_product_fields(self):
 		category = Category.objects.create(name='Full Details Category', slug='full-details-category')
 		subcategory = SubCategory.objects.create(category=category, name='Full Details Subcategory', slug='full-details-subcategory')
@@ -664,4 +720,3 @@ class SellerProductTaxonomyTests(TestCase):
 
 		self.assertEqual(response.status_code, 302)
 		self.assertFalse(Product.objects.filter(title='Mismatched subcategory brand product').exists())
-
