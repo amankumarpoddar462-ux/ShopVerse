@@ -354,7 +354,7 @@
 
     <!-- Top Categories Quick Strip -->
     <div class="home-category-viewport">
-        <div class="home-category-strip" style="display: flex; gap: 20px; overflow: visible; padding: 12px 6px 20px; margin-bottom: 20px; scrollbar-width: none; width: max-content; min-width: 100%;">
+        <div class="home-category-strip" style="display: flex; justify-content: center; gap: 20px; overflow: visible; padding: 12px 6px 20px; margin-bottom: 20px; scrollbar-width: none; width: max-content; min-width: 100%;">
             {% for c in categories %}
         <a href="/customer/products/?category={{ c.slug }}#category-{{ c.slug }}" style="display: flex; flex-direction: column; align-items: center; text-decoration: none; min-width: 90px; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
             <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(59, 130, 246, 0.1); border: 2px solid rgba(59, 130, 246, 0.25); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: var(--primary); margin-bottom: 8px;">
