@@ -7,7 +7,7 @@
 {% block panel_content %}
 <div class="glass-card" style="padding: 24px; margin-bottom: 40px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">
+        <h3 id="productCatalogTitle" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">
             Your Product Catalog ({{ products.count }})
         </h3>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -27,7 +27,7 @@
         </div>
     </div>
 
-    <form method="GET" action="{% url 'seller:products' %}" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;">
+    <form id="productFilters" method="GET" action="{% url 'seller:products' %}" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;">
         {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
         <select name="brand" aria-label="Filter by brand" style="padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-app); color: var(--text-primary);">
             <option value="">All Brands</option>
@@ -41,8 +41,8 @@
             <option value="">All Subcategories</option>
             {% for subcategory in subcategories %}<option value="{{ subcategory.id }}" {% if selected_subcategory == subcategory.id|stringformat:"s" %}selected{% endif %}>{{ subcategory.category.name }} / {{ subcategory.name }}</option>{% endfor %}
         </select>
-        <button type="submit" class="btn btn-secondary btn-sm">Apply Filters</button>
-        <a href="{% url 'seller:products' %}" class="btn btn-secondary btn-sm" style="text-decoration: none;">Clear</a>
+        <button id="clearProductFilters" type="button" class="btn btn-secondary btn-sm">Clear</button>
+        <span id="productFilterStatus" role="status" aria-live="polite"></span>
     </form>
 
     <div style="overflow-x: auto;">
@@ -61,7 +61,7 @@
             </thead>
             <tbody>
                 {% for p in products %}
-                    <tr onclick="if (!event.target.closest('a, button, form')) window.location.href='/seller/products/{{ p.id }}/';" style="border-bottom: 1px solid var(--border-color); cursor: pointer;">
+                    <tr onclick="if (!event.target.closest('a, button, form, input, select, label')) window.location.href='/seller/products/{{ p.id }}/';" style="border-bottom: 1px solid var(--border-color); cursor: pointer;">
                         <td class="product-selection-cell" style="display: none; padding: 12px 14px;"><input class="product-checkbox" type="checkbox" name="product_ids" value="{{ p.id }}" form="bulkDeleteForm" aria-label="Select {{ p.title }}"></td>
                         <td style="padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
                             <img src="{{ p.main_image_url }}" alt="{{ p.title }}" style="width: 48px; height: 48px; object-fit: contain; border-radius: 8px; background: #fff; border: 1px solid var(--border-color);">
@@ -106,42 +106,99 @@
     </div>
 </div>
 <script>
-    const productCheckboxes = document.querySelectorAll('.product-checkbox');
+    const productFilters = document.getElementById('productFilters');
     const selectAllProducts = document.getElementById('selectAllProducts');
     const bulkDeleteButton = document.getElementById('bulkDeleteButton');
     const toggleProductSelection = document.getElementById('toggleProductSelection');
     const bulkDeleteForm = document.getElementById('bulkDeleteForm');
     const productCatalogTable = document.getElementById('productCatalogTable');
-    const setSelectionMode = (enabled) => {
+    const productFilterStatus = document.getElementById('productFilterStatus');
+    let filterRequest;
+    const updateSelectionModeCells = () => {
+        const enabled = toggleProductSelection.getAttribute('aria-pressed') === 'true';
         productCatalogTable.querySelectorAll('.product-selection-cell').forEach((cell) => {
             cell.style.display = enabled ? 'table-cell' : 'none';
         });
+    };
+    const setSelectionMode = (enabled) => {
         bulkDeleteForm.style.display = enabled ? 'block' : 'none';
         toggleProductSelection.setAttribute('aria-pressed', String(enabled));
         toggleProductSelection.innerHTML = enabled
             ? '<i class="fa-solid fa-xmark"></i> Cancel Selection'
             : '<i class="fa-solid fa-check-to-slot"></i> Select Products';
         if (!enabled) {
-            productCheckboxes.forEach((checkbox) => { checkbox.checked = false; });
+            productCatalogTable.querySelectorAll('.product-checkbox').forEach((checkbox) => { checkbox.checked = false; });
         }
+        updateSelectionModeCells();
         updateBulkDeleteState();
     };
     const updateBulkDeleteState = () => {
+        const productCheckboxes = productCatalogTable.querySelectorAll('.product-checkbox');
         const selectedCount = document.querySelectorAll('.product-checkbox:checked').length;
         bulkDeleteButton.disabled = selectedCount === 0;
         bulkDeleteButton.innerHTML = `<i class="fa-solid fa-trash-can"></i> Delete Selected${selectedCount ? ` (${selectedCount})` : ''}`;
         selectAllProducts.checked = productCheckboxes.length > 0 && selectedCount === productCheckboxes.length;
         selectAllProducts.indeterminate = selectedCount > 0 && selectedCount < productCheckboxes.length;
     };
+    const applyProductFilters = async () => {
+        if (filterRequest) filterRequest.abort();
+        filterRequest = new AbortController();
+        productFilterStatus.textContent = 'Loading...';
+        const query = new URLSearchParams(new FormData(productFilters));
+        const url = `${productFilters.action}?${query.toString()}`;
+        try {
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                signal: filterRequest.signal,
+            });
+            if (!response.ok) throw new Error(`Catalog request failed (${response.status}).`);
+            const html = await response.text();
+            const nextPage = new DOMParser().parseFromString(html, 'text/html');
+            const nextBody = nextPage.querySelector('#productCatalogTable tbody');
+            if (!nextBody) throw new Error('Could not load the filtered product list.');
+            productCatalogTable.querySelector('tbody').replaceChildren(...nextBody.childNodes);
+            const nextTitle = nextPage.querySelector('#productCatalogTitle');
+            if (nextTitle) document.getElementById('productCatalogTitle').textContent = nextTitle.textContent;
+            const nextUrl = new URL(url, window.location.href);
+            window.history.replaceState({}, '', `${nextUrl.pathname}${nextUrl.search}`);
+            updateSelectionModeCells();
+            updateBulkDeleteState();
+            productFilterStatus.textContent = '';
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                productFilterStatus.textContent = 'Unable to update products. Please try again.';
+                console.error(error);
+            }
+        }
+    };
     toggleProductSelection.addEventListener('click', () => {
         setSelectionMode(toggleProductSelection.getAttribute('aria-pressed') !== 'true');
     });
-    productCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', updateBulkDeleteState));
-    productCheckboxes.forEach((checkbox) => checkbox.addEventListener('click', (event) => event.stopPropagation()));
+    productFilters.querySelectorAll('select').forEach((select) => select.addEventListener('change', applyProductFilters));
+    productFilters.addEventListener('submit', (event) => {
+        event.preventDefault();
+        applyProductFilters();
+    });
+    document.getElementById('clearProductFilters').addEventListener('click', () => {
+        productFilters.querySelectorAll('select').forEach((select) => { select.value = ''; });
+        applyProductFilters();
+    });
+    productCatalogTable.addEventListener('change', (event) => {
+        if (event.target.matches('.product-checkbox')) updateBulkDeleteState();
+    });
+    productCatalogTable.addEventListener('click', (event) => {
+        if (event.target.matches('input[type="checkbox"]')) event.stopPropagation();
+    });
     selectAllProducts.addEventListener('change', () => {
-        productCheckboxes.forEach((checkbox) => { checkbox.checked = selectAllProducts.checked; });
+        productCatalogTable.querySelectorAll('.product-checkbox').forEach((checkbox) => { checkbox.checked = selectAllProducts.checked; });
         updateBulkDeleteState();
     });
+    window.addEventListener('popstate', () => {
+        const params = new URLSearchParams(window.location.search);
+        productFilters.querySelectorAll('select').forEach((select) => { select.value = params.get(select.name) || ''; });
+        applyProductFilters();
+    });
+    updateSelectionModeCells();
     updateBulkDeleteState();
 </script>
 {% endblock %}
