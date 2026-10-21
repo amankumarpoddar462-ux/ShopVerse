@@ -100,14 +100,6 @@ class MerchantOnboardingTests(TestCase):
 
 
 class HomepageCategoryTests(TestCase):
-    def test_public_navigation_has_responsive_menu_toggle_and_search(self):
-        response = self.client.get(reverse('public:home'))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'data-public-menu-toggle')
-        self.assertContains(response, 'id="publicNavigationMenu"')
-        self.assertContains(response, 'id="globalSearchInput"')
-
     def test_homepage_limits_category_strip_to_ten_items(self):
         categories = [
             Category.objects.create(name=f'Homepage Category {index}', slug=f'homepage-category-{index}')

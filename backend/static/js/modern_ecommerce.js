@@ -842,7 +842,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initCustomSelects();
     initKpiCards();
     initCustomerFilterMenus();
-    initPublicNavigation();
 
     // Voice search trigger
     const voiceBtn = document.getElementById('voiceSearchBtn');
@@ -858,36 +857,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
-function initPublicNavigation() {
-    const button = document.querySelector('[data-public-menu-toggle]');
-    const menu = document.getElementById('publicNavigationMenu');
-    if (!button || !menu) return;
-
-    const setExpanded = expanded => {
-        button.setAttribute('aria-expanded', String(expanded));
-        button.setAttribute('aria-label', expanded ? 'Close navigation menu' : 'Open navigation menu');
-        button.querySelector('i')?.classList.toggle('fa-xmark', expanded);
-        button.querySelector('i')?.classList.toggle('fa-bars', !expanded);
-        menu.classList.toggle('active', expanded);
-    };
-
-    button.addEventListener('click', () => {
-        setExpanded(button.getAttribute('aria-expanded') !== 'true');
-    });
-
-    menu.addEventListener('click', event => {
-        if (event.target.closest('a')) setExpanded(false);
-    });
-
-    document.addEventListener('click', event => {
-        if (!menu.contains(event.target) && !button.contains(event.target)) setExpanded(false);
-    });
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') setExpanded(false);
-    });
-}
 
 function initPasswordToggles() {
     document.querySelectorAll('[data-password-toggle]').forEach(button => {
