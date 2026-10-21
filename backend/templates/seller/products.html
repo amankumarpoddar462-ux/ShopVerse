@@ -11,7 +11,10 @@
             Your Product Catalog ({{ products.count }})
         </h3>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <form id="bulkDeleteForm" method="POST" action="{% url 'seller:products' %}" onsubmit="return confirm('Delete the selected product listings?');">
+            <button id="toggleProductSelection" type="button" class="btn btn-secondary btn-sm" aria-pressed="false">
+                <i class="fa-solid fa-check-to-slot"></i> Select Products
+            </button>
+            <form id="bulkDeleteForm" method="POST" action="{% url 'seller:products' %}" onsubmit="return confirm('Delete the selected product listings?');" style="display: none;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="delete">
                 <button id="bulkDeleteButton" type="submit" class="btn btn-secondary btn-sm" disabled style="color: #ef4444;">
@@ -43,10 +46,10 @@
     </form>
 
     <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+        <table id="productCatalogTable" style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
             <thead>
                 <tr style="background: var(--bg-app); text-align: left;">
-                    <th style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);"><input id="selectAllProducts" type="checkbox" aria-label="Select all products"></th>
+                    <th class="product-selection-cell" style="display: none; padding: 12px 14px; border-bottom: 1px solid var(--border-color);"><input id="selectAllProducts" type="checkbox" aria-label="Select all products"></th>
                     <th style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">Product & Code</th>
                     <th style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">Category</th>
                     <th style="padding: 12px 14px; border-bottom: 1px solid var(--border-color);">Base Earning</th>
@@ -59,7 +62,7 @@
             <tbody>
                 {% for p in products %}
                     <tr onclick="if (!event.target.closest('a, button, form')) window.location.href='/seller/products/{{ p.id }}/';" style="border-bottom: 1px solid var(--border-color); cursor: pointer;">
-                        <td style="padding: 12px 14px;"><input class="product-checkbox" type="checkbox" name="product_ids" value="{{ p.id }}" form="bulkDeleteForm" aria-label="Select {{ p.title }}"></td>
+                        <td class="product-selection-cell" style="display: none; padding: 12px 14px;"><input class="product-checkbox" type="checkbox" name="product_ids" value="{{ p.id }}" form="bulkDeleteForm" aria-label="Select {{ p.title }}"></td>
                         <td style="padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
                             <img src="{{ p.main_image_url }}" alt="{{ p.title }}" style="width: 48px; height: 48px; object-fit: contain; border-radius: 8px; background: #fff; border: 1px solid var(--border-color);">
                             <div>
@@ -106,6 +109,23 @@
     const productCheckboxes = document.querySelectorAll('.product-checkbox');
     const selectAllProducts = document.getElementById('selectAllProducts');
     const bulkDeleteButton = document.getElementById('bulkDeleteButton');
+    const toggleProductSelection = document.getElementById('toggleProductSelection');
+    const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+    const productCatalogTable = document.getElementById('productCatalogTable');
+    const setSelectionMode = (enabled) => {
+        productCatalogTable.querySelectorAll('.product-selection-cell').forEach((cell) => {
+            cell.style.display = enabled ? 'table-cell' : 'none';
+        });
+        bulkDeleteForm.style.display = enabled ? 'block' : 'none';
+        toggleProductSelection.setAttribute('aria-pressed', String(enabled));
+        toggleProductSelection.innerHTML = enabled
+            ? '<i class="fa-solid fa-xmark"></i> Cancel Selection'
+            : '<i class="fa-solid fa-check-to-slot"></i> Select Products';
+        if (!enabled) {
+            productCheckboxes.forEach((checkbox) => { checkbox.checked = false; });
+        }
+        updateBulkDeleteState();
+    };
     const updateBulkDeleteState = () => {
         const selectedCount = document.querySelectorAll('.product-checkbox:checked').length;
         bulkDeleteButton.disabled = selectedCount === 0;
@@ -113,10 +133,15 @@
         selectAllProducts.checked = productCheckboxes.length > 0 && selectedCount === productCheckboxes.length;
         selectAllProducts.indeterminate = selectedCount > 0 && selectedCount < productCheckboxes.length;
     };
+    toggleProductSelection.addEventListener('click', () => {
+        setSelectionMode(toggleProductSelection.getAttribute('aria-pressed') !== 'true');
+    });
     productCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', updateBulkDeleteState));
+    productCheckboxes.forEach((checkbox) => checkbox.addEventListener('click', (event) => event.stopPropagation()));
     selectAllProducts.addEventListener('change', () => {
         productCheckboxes.forEach((checkbox) => { checkbox.checked = selectAllProducts.checked; });
         updateBulkDeleteState();
     });
+    updateBulkDeleteState();
 </script>
 {% endblock %}
