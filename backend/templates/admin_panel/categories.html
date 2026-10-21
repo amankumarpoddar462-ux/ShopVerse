@@ -9,7 +9,7 @@
     <!-- Categories List -->
     <div class="glass-card" style="padding: 24px;">
         <h3 style="margin: 0 0 20px 0; font-size: 1.2rem; color: var(--text-primary); display: flex; align-items: center; gap: 10px;">
-            <i class="fa-solid fa-layer-group" style="color: var(--primary);"></i> Active Categories ({{ categories|length }})
+            <i class="fa-solid fa-layer-group" style="color: var(--primary);"></i> Categories ({{ categories|length }})
         </h3>
 
         <div class="table-container">
@@ -42,7 +42,14 @@
                             <span class="badge badge-info">{{ c.subcategories.count }} subcategories</span>
                         </td>
                         <td>
-                            <span class="badge badge-success">Active</span>
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="toggle_status">
+                                <input type="hidden" name="category_id" value="{{ c.id }}">
+                                <button type="submit" class="badge badge-{% if c.is_active %}success{% else %}danger{% endif %}" style="border: 0; cursor: pointer;" aria-label="Set {{ c.name }} {% if c.is_active %}inactive{% else %}active{% endif %}">
+                                    {% if c.is_active %}Active{% else %}Inactive{% endif %}
+                                </button>
+                            </form>
                         </td>
                         <td>
                             <div style="display: flex; gap: 6px; align-items: flex-start;">

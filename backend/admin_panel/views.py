@@ -680,6 +680,14 @@ def toggle_product_status(request, product_id):
 def categories(request):
     if request.method == "POST":
         action = request.POST.get('action', 'create')
+        if action == 'toggle_status':
+            category = get_object_or_404(Category, id=request.POST.get('category_id'))
+            category.is_active = not category.is_active
+            category.save(update_fields=['is_active'])
+            status = 'ACTIVE' if category.is_active else 'INACTIVE'
+            messages.success(request, f"Category '{category.name}' is now {status}.")
+            return redirect("admin_panel:categories")
+
         if action == 'delete':
             category = get_object_or_404(Category, id=request.POST.get('category_id'))
             name = category.name

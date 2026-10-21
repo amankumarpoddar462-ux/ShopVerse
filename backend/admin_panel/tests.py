@@ -460,6 +460,22 @@ class AdminCategoryTaxonomyTests(TestCase):
                 response = self.client.get(reverse(f'admin_panel:{page_name}'))
                 self.assertEqual(response.status_code, 200)
 
+    def test_admin_can_toggle_category_active_status(self):
+        admin = User.objects.create_user(username='category-status-admin', password='test-password', role='admin')
+        self.client.force_login(admin)
+        category = Category.objects.create(name='Status Category', slug='status-category')
+        url = reverse('admin_panel:categories')
+
+        inactive_response = self.client.post(url, {'action': 'toggle_status', 'category_id': category.id})
+        category.refresh_from_db()
+        self.assertEqual(inactive_response.status_code, 302)
+        self.assertFalse(category.is_active)
+
+        active_response = self.client.post(url, {'action': 'toggle_status', 'category_id': category.id})
+        category.refresh_from_db()
+        self.assertEqual(active_response.status_code, 302)
+        self.assertTrue(category.is_active)
+
     def test_admin_can_add_subcategory_and_brand_to_selected_category(self):
         category = Category.objects.create(name='Taxonomy Electronics', slug='taxonomy-electronics')
 
