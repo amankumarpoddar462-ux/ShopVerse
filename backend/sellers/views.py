@@ -453,13 +453,39 @@ def edit_product(request, product_id):
 
 
 def categories(request):
-    cats = Category.objects.filter(is_active=True)
+    cats = Category.objects.filter(is_active=True).order_by('name')
     context = {
         'current_panel': 'seller',
         'active_menu': 'categories',
         'categories': cats,
     }
     return render(request, "seller/categories.html", context)
+
+
+def category_subcategories(request, category_id):
+    category = get_object_or_404(Category, id=category_id, is_active=True)
+    subcategories = SubCategory.objects.filter(category=category).order_by('name')
+    context = {
+        'current_panel': 'seller',
+        'active_menu': 'categories',
+        'category': category,
+        'subcategories': subcategories,
+    }
+    return render(request, "seller/category-subcategories.html", context)
+
+
+def subcategory_brands(request, category_id, subcategory_id):
+    category = get_object_or_404(Category, id=category_id, is_active=True)
+    subcategory = get_object_or_404(SubCategory, id=subcategory_id, category=category)
+    brands = Brand.objects.filter(subcategory=subcategory).order_by('name')
+    context = {
+        'current_panel': 'seller',
+        'active_menu': 'categories',
+        'category': category,
+        'subcategory': subcategory,
+        'brands': brands,
+    }
+    return render(request, "seller/subcategory-brands.html", context)
 
 
 def inventory(request):

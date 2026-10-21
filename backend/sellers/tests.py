@@ -210,6 +210,41 @@ class SellerEarningsTests(TestCase):
 		self.assertFalse(Product.objects.filter(id=product.id).exists())
 		self.assertTrue(Product.objects.filter(id=other_product.id).exists())
 
+	def test_category_navigation_opens_subcategories_then_their_brands(self):
+		category = Category.objects.create(name='Navigation Category', slug='navigation-category')
+		subcategory = SubCategory.objects.create(
+			category=category,
+			name='Navigation Subcategory',
+			slug='navigation-subcategory',
+		)
+		brand = Brand.objects.create(
+			subcategory=subcategory,
+			name='Navigation Brand',
+			slug='navigation-brand',
+		)
+
+		categories_response = self.client.get(reverse('seller:categories'))
+		subcategories_response = self.client.get(
+			reverse('seller:category_subcategories', args=[category.id])
+		)
+		brands_response = self.client.get(
+			reverse('seller:subcategory_brands', args=[category.id, subcategory.id])
+		)
+
+		self.assertContains(categories_response, reverse('seller:category_subcategories', args=[category.id]))
+		self.assertContains(subcategories_response, subcategory.name)
+		self.assertContains(
+			subcategories_response,
+			reverse('seller:subcategory_brands', args=[category.id, subcategory.id]),
+		)
+		self.assertContains(brands_response, brand.name)
+		self.assertEqual(
+			self.client.get(
+				reverse('seller:subcategory_brands', args=[category.id + 100, subcategory.id])
+			).status_code,
+			404,
+		)
+
 	def test_product_detail_and_edit_show_complete_product_fields(self):
 		category = Category.objects.create(name='Full Details Category', slug='full-details-category')
 		subcategory = SubCategory.objects.create(category=category, name='Full Details Subcategory', slug='full-details-subcategory')

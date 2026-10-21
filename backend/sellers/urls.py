@@ -17,6 +17,8 @@ urlpatterns = [
 
     # Categories
     path("categories/", views.categories, name="categories"),
+    path("categories/<int:category_id>/", views.category_subcategories, name="category_subcategories"),
+    path("categories/<int:category_id>/subcategories/<int:subcategory_id>/", views.subcategory_brands, name="subcategory_brands"),
 
     # Inventory
     path("inventory/", views.inventory, name="inventory"),

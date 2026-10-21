@@ -1,0 +1,30 @@
+{% extends "base/panel_base.html" %}
+
+{% block page_title %}{{ subcategory.name }} Brands{% endblock %}
+{% block page_subtitle %}Brands in {{ category.name }} / {{ subcategory.name }}{% endblock %}
+
+{% block panel_content %}
+<div class="glass-card" style="padding: 24px; margin-bottom: 40px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+        <a href="{% url 'seller:categories' %}" class="btn btn-secondary btn-sm" style="text-decoration: none;">
+            <i class="fa-solid fa-arrow-left"></i> Categories
+        </a>
+        <a href="{% url 'seller:category_subcategories' category.id %}" class="btn btn-secondary btn-sm" style="text-decoration: none;">
+            <i class="fa-solid fa-arrow-left"></i> {{ category.name }}
+        </a>
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--text-primary);">
+            {{ subcategory.name }} Brands
+        </h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;">
+        {% for brand in brands %}
+            <div style="padding: 16px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; font-weight: 600; color: var(--text-primary);">
+                {% if brand.logo_url %}<img src="{{ brand.logo_url }}" alt="" style="width: 28px; height: 28px; object-fit: contain; vertical-align: middle; margin-right: 8px;">{% else %}<i class="fa-solid fa-certificate" style="color: var(--primary); margin-right: 8px;"></i>{% endif %}
+                {{ brand.name }}
+            </div>
+        {% empty %}
+            <p style="color: var(--text-muted);">No brands are available for this subcategory yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
