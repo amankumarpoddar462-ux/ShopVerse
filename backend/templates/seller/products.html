@@ -29,17 +29,9 @@
 
     <form id="productFilters" method="GET" action="{% url 'seller:products' %}" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;">
         {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
-        <select name="brand" aria-label="Filter by brand" style="padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-app); color: var(--text-primary);">
-            <option value="">All Brands</option>
-            {% for brand in brands %}<option value="{{ brand.id }}" data-subcategory-id="{{ brand.subcategory_id|default:'' }}" {% if selected_brand == brand.id|stringformat:"s" %}selected{% endif %}>{{ brand.name }}</option>{% endfor %}
-        </select>
         <select name="category" aria-label="Filter by category" style="padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-app); color: var(--text-primary);">
             <option value="">All Categories</option>
             {% for category in categories %}<option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>{% endfor %}
-        </select>
-        <select name="subcategory" aria-label="Filter by subcategory" style="padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-app); color: var(--text-primary);">
-            <option value="">All Subcategories</option>
-            {% for subcategory in subcategories %}<option value="{{ subcategory.id }}" data-category-id="{{ subcategory.category_id }}" {% if selected_subcategory == subcategory.id|stringformat:"s" %}selected{% endif %}>{{ subcategory.category.name }} / {{ subcategory.name }}</option>{% endfor %}
         </select>
         <button id="clearProductFilters" type="button" class="btn btn-secondary btn-sm">Clear</button>
         <span id="productFilterStatus" role="status" aria-live="polite"></span>
@@ -114,33 +106,7 @@
     const productCatalogTable = document.getElementById('productCatalogTable');
     const productFilterStatus = document.getElementById('productFilterStatus');
     const categoryFilter = productFilters.elements.category;
-    const subcategoryFilter = productFilters.elements.subcategory;
-    const brandFilter = productFilters.elements.brand;
-    const allSubcategoryOptions = [...subcategoryFilter.options].slice(1).map((option) => option.cloneNode(true));
-    const allBrandOptions = [...brandFilter.options].slice(1).map((option) => option.cloneNode(true));
     let filterRequest;
-    const resetOptions = (select, placeholder, options) => {
-        select.replaceChildren(new Option(placeholder, ''), ...options);
-    };
-    const updateDependentOptions = () => {
-        const categoryId = categoryFilter.value;
-        const selectedSubcategory = subcategoryFilter.value;
-        const subcategoryOptions = allSubcategoryOptions.filter(
-            (option) => !categoryId || option.dataset.categoryId === categoryId
-        );
-        const validSubcategory = subcategoryOptions.some((option) => option.value === selectedSubcategory);
-        resetOptions(subcategoryFilter, 'All Subcategories', subcategoryOptions);
-        subcategoryFilter.value = validSubcategory ? selectedSubcategory : '';
-
-        const activeSubcategoryId = subcategoryFilter.value;
-        const brandOptions = activeSubcategoryId
-            ? allBrandOptions.filter((option) => option.dataset.subcategoryId === activeSubcategoryId)
-            : [];
-        const selectedBrand = brandFilter.value;
-        resetOptions(brandFilter, activeSubcategoryId ? 'All Brands' : 'Select Subcategory First', brandOptions);
-        brandFilter.disabled = !activeSubcategoryId;
-        brandFilter.value = brandOptions.some((option) => option.value === selectedBrand) ? selectedBrand : '';
-    };
     const updateSelectionModeCells = () => {
         const enabled = toggleProductSelection.getAttribute('aria-pressed') === 'true';
         productCatalogTable.querySelectorAll('.product-selection-cell').forEach((cell) => {
@@ -201,22 +167,13 @@
     toggleProductSelection.addEventListener('click', () => {
         setSelectionMode(toggleProductSelection.getAttribute('aria-pressed') !== 'true');
     });
-    categoryFilter.addEventListener('change', () => {
-        updateDependentOptions();
-        applyProductFilters();
-    });
-    subcategoryFilter.addEventListener('change', () => {
-        updateDependentOptions();
-        applyProductFilters();
-    });
-    brandFilter.addEventListener('change', applyProductFilters);
+    categoryFilter.addEventListener('change', applyProductFilters);
     productFilters.addEventListener('submit', (event) => {
         event.preventDefault();
         applyProductFilters();
     });
     document.getElementById('clearProductFilters').addEventListener('click', () => {
-        productFilters.querySelectorAll('select').forEach((select) => { select.value = ''; });
-        updateDependentOptions();
+        categoryFilter.value = '';
         applyProductFilters();
     });
     productCatalogTable.addEventListener('change', (event) => {
@@ -232,21 +189,8 @@
     window.addEventListener('popstate', () => {
         const params = new URLSearchParams(window.location.search);
         categoryFilter.value = params.get('category') || '';
-        subcategoryFilter.value = params.get('subcategory') || '';
-        updateDependentOptions();
-        brandFilter.value = params.get('brand') || '';
         applyProductFilters();
     });
-    if (brandFilter.value && !subcategoryFilter.value) {
-        const selectedBrand = brandFilter.selectedOptions[0];
-        const parentSubcategory = selectedBrand?.dataset.subcategoryId;
-        const parentOption = [...subcategoryFilter.options].find((option) => option.value === parentSubcategory);
-        if (parentOption) {
-            categoryFilter.value = parentOption.dataset.categoryId;
-            subcategoryFilter.value = parentSubcategory;
-        }
-    }
-    updateDependentOptions();
     updateSelectionModeCells();
     updateBulkDeleteState();
 </script>

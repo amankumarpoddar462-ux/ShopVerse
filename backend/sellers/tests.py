@@ -162,6 +162,18 @@ class SellerEarningsTests(TestCase):
 			base_price=100,
 			selling_price=120,
 		)
+		other_category = Category.objects.create(name='Other Filter Category', slug='other-filter-category')
+		unfiltered_product = Product.objects.create(
+			seller=self.seller,
+			title='Unfiltered Product',
+			slug='unfiltered-product',
+			category=other_category,
+			sku='UNFILTERED-PRODUCT-SKU',
+			item_code='UNFILTERED-PRODUCT-CODE',
+			description='Product outside the selected category',
+			base_price=100,
+			selling_price=120,
+		)
 		other_user = User.objects.create_user(username='bulk-other-seller', password='test-password', role='seller')
 		other_seller = SellerProfile.objects.create(
 			user=other_user,
@@ -183,15 +195,12 @@ class SellerEarningsTests(TestCase):
 			selling_price=120,
 		)
 
-		response = self.client.get(reverse('seller:products'), {
-			'category': category.id,
-			'subcategory': subcategory.id,
-			'brand': brand.id,
-		})
+		response = self.client.get(reverse('seller:products'), {'category': category.id})
 		self.assertEqual(list(response.context['products']), [product])
-		self.assertContains(response, 'name="brand"')
 		self.assertContains(response, 'name="category"')
-		self.assertContains(response, 'name="subcategory"')
+		self.assertNotContains(response, 'name="brand"')
+		self.assertNotContains(response, 'name="subcategory"')
+		self.assertTrue(Product.objects.filter(id=unfiltered_product.id).exists())
 
 		delete_response = self.client.post(reverse('seller:products'), {
 			'action': 'delete',
