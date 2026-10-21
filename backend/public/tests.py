@@ -124,6 +124,15 @@ class HomepageCategoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, slide.image_url)
 
+    def test_homepage_uses_fallback_when_legacy_hero_file_is_missing(self):
+        HomepageHeroSlide.objects.create(image='homepage/slides/missing.jpg')
+
+        response = self.client.get(reverse('public:home'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e')
+        self.assertNotContains(response, '/media/homepage/slides/missing.jpg')
+
     def test_login_uses_google_oauth_without_emulating_google_account_picker(self):
         response = self.client.get(reverse('users:login'))
 

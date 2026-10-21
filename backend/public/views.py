@@ -70,10 +70,21 @@ def home(request):
     marketplace_settings, _ = MarketplaceSettings.objects.get_or_create(pk=1)
     hero_slides = list(HomepageHeroSlide.objects.all())
     if hero_slides:
-        hero_images = [slide.display_url for slide in hero_slides]
+        hero_images = []
+        for slide in hero_slides:
+            if slide.image_url:
+                hero_images.append(slide.image_url)
+            elif slide.image and slide.image.storage.exists(slide.image.name):
+                hero_images.append(slide.image.url)
     elif marketplace_settings.hero_image:
-        hero_images = [marketplace_settings.hero_image.url]
+        hero_images = (
+            [marketplace_settings.hero_image.url]
+            if marketplace_settings.hero_image.storage.exists(marketplace_settings.hero_image.name)
+            else []
+        )
     else:
+        hero_images = []
+    if not hero_images:
         hero_images = ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1000&q=85']
     categories = Category.objects.filter(is_active=True).order_by('id')[:10]
     featured_products = Product.objects.filter(is_active=True).select_related('category', 'seller').order_by('category__name', '-created_at')
