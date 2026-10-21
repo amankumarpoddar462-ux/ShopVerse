@@ -60,7 +60,7 @@
             {% endif %}
             {% for slide in hero_slides %}
             <article class="hero-image-preview-card" data-saved-hero-image>
-                <button class="hero-image-preview" type="button" data-preview-url="{{ slide.image.url }}" aria-label="Preview hero slide {{ forloop.counter }}"><img src="{{ slide.image.url }}" alt="Hero slide {{ forloop.counter }}"></button>
+                <button class="hero-image-preview" type="button" data-preview-url="{{ slide.display_url }}" aria-label="Preview hero slide {{ forloop.counter }}"><img src="{{ slide.display_url }}" alt="Hero slide {{ forloop.counter }}"></button>
                 <span class="hero-image-caption">Slide {{ forloop.counter }} <input class="form-control hero-image-order" type="number" name="hero_slide_order_{{ slide.id }}" value="{{ slide.ordering }}" min="1" max="10" aria-label="Order for slide {{ forloop.counter }}"></span>
                 <button class="hero-image-remove" type="button" data-remove-saved aria-label="Remove hero slide {{ forloop.counter }}" title="Remove image"><i class="fa-solid fa-xmark"></i></button>
                 <input type="checkbox" name="remove_hero_slides" value="{{ slide.id }}" data-remove-input hidden>

@@ -1,5 +1,6 @@
 from django import forms
 from products.models import Product
+from products.image_storage import validate_image_upload
 
 from .models import FAQItem, MarketplaceSettings
 
@@ -25,6 +26,11 @@ class HomepageHeroSlidesForm(forms.Form):
         images = self.cleaned_data['hero_images']
         if len(images) > 10:
             raise forms.ValidationError('Upload no more than 10 hero images at a time.')
+        for image in images:
+            try:
+                validate_image_upload(image, image_label='hero image')
+            except forms.ValidationError as exc:
+                raise forms.ValidationError(exc.messages) from exc
         return images
 
 

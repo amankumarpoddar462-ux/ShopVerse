@@ -8,7 +8,7 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from PIL import Image, UnidentifiedImageError
 
 
-MAX_PRODUCT_IMAGE_SIZE = 5 * 1024 * 1024
+MAX_IMAGE_UPLOAD_SIZE = 5 * 1024 * 1024
 ALLOWED_IMAGE_FORMATS = {'JPEG', 'PNG', 'WEBP', 'GIF'}
 logger = logging.getLogger(__name__)
 
@@ -28,11 +28,11 @@ def _configure_cloudinary():
     if not config.cloud_name or not config.api_key or not config.api_secret:
         raise ImproperlyConfigured(
             'Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and '
-            'CLOUDINARY_API_SECRET (or CLOUDINARY_URL) before uploading product images.'
+            'CLOUDINARY_API_SECRET (or CLOUDINARY_URL) before uploading images.'
         )
 
 
-def validate_product_image(uploaded_file):
+def validate_image_upload(uploaded_file, image_label='image'):
     if hasattr(uploaded_file, 'size'):
         file_size = uploaded_file.size
     else:
@@ -41,22 +41,26 @@ def validate_product_image(uploaded_file):
         file_size = uploaded_file.tell()
         uploaded_file.seek(current_position)
 
-    if file_size > MAX_PRODUCT_IMAGE_SIZE:
-        raise ValidationError('Each product image must be no larger than 5 MB.')
+    if file_size > MAX_IMAGE_UPLOAD_SIZE:
+        raise ValidationError(f'Each {image_label} must be no larger than 5 MB.')
 
     try:
         uploaded_file.seek(0)
         with Image.open(uploaded_file) as image:
             image.verify()
             if image.format not in ALLOWED_IMAGE_FORMATS:
-                raise ValidationError('Use a JPEG, PNG, WEBP, or GIF product image.')
+                raise ValidationError(f'Use a JPEG, PNG, WEBP, or GIF {image_label}.')
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:
         raise ValidationError('Choose a valid image file.') from exc
     finally:
         uploaded_file.seek(0)
 
 
-def upload_product_images(uploaded_files, folder):
+def validate_product_image(uploaded_file):
+    validate_image_upload(uploaded_file, image_label='product image')
+
+
+def upload_images_to_cloudinary(uploaded_files, folder):
     uploaded_files = list(uploaded_files)
     if not uploaded_files:
         return []
@@ -86,7 +90,11 @@ def upload_product_images(uploaded_files, folder):
     return uploaded_assets
 
 
-def delete_product_image(public_id):
+def upload_product_images(uploaded_files, folder):
+    return upload_images_to_cloudinary(uploaded_files, folder)
+
+
+def delete_cloudinary_image(public_id):
     if not public_id:
         return
     _configure_cloudinary()
@@ -97,3 +105,7 @@ def delete_product_image(public_id):
     )
     if result.get('result') not in {'ok', 'not found'}:
         raise CloudinaryError(f"Cloudinary could not delete image {public_id!r}.")
+
+
+def delete_product_image(public_id):
+    delete_cloudinary_image(public_id)

@@ -103,6 +103,8 @@ body {
     bottom: 0;
     height: 100vh;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
     z-index: 1000;
     box-shadow: var(--shadow-sm);
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
@@ -312,7 +314,7 @@ body.dark-theme .role-badge.customer {
 
 /* Sidebar Nav Menu */
 .sidebar-nav {
-    flex: 1;
+    flex: 1 0 auto;
     padding: 10px 12px;
     list-style: none;
     margin: 0;
@@ -1488,6 +1490,33 @@ body.dark-theme .kpi-card.primary {
 
 /* Responsive Fixes */
 @media (max-width: 768px) {
+    .customer-order-card {
+        padding: 14px !important;
+    }
+
+    .order-action-buttons {
+        width: 100%;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px !important;
+    }
+
+    .order-action-buttons > a,
+    .order-action-buttons > button,
+    .order-action-buttons > form {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        justify-content: center;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .order-action-buttons > form > button {
+        width: 100%;
+        white-space: normal;
+    }
+
     .app-topbar {
         display: grid;
         grid-template-columns: 42px minmax(0, 1fr) auto;
@@ -1584,6 +1613,13 @@ body.dark-theme .kpi-card.primary {
         position: fixed;
         left: -280px;
         width: min(280px, 86vw);
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100dvh;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
         transition: left 0.25s ease;
         z-index: 3000;
     }

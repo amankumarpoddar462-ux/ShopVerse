@@ -2017,19 +2017,20 @@ ul {
 
     .home-hero-image {
         padding: 0 !important;
-        height: auto !important;
-        min-height: 0 !important;
-        align-items: flex-start !important;
-        align-self: start !important;
+        height: 250px !important;
+        min-height: 250px !important;
+        align-self: stretch !important;
     }
 
     .home-hero-image img {
+        position: absolute;
+        inset: 0;
         display: block;
         width: 100% !important;
         max-width: 100% !important;
-        height: auto !important;
-        max-height: none !important;
-        object-fit: contain !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        object-fit: cover !important;
         object-position: center;
         border-radius: 0 !important;
     }

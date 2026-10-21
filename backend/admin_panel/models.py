@@ -47,11 +47,19 @@ class MarketplaceSettings(models.Model):
 
 
 class HomepageHeroSlide(models.Model):
-	image = models.ImageField(upload_to='homepage/slides/')
+	image = models.ImageField(upload_to='homepage/slides/', blank=True)
+	image_url = models.URLField(max_length=500, blank=True, default='')
+	image_public_id = models.CharField(max_length=255, blank=True, default='')
 	ordering = models.PositiveSmallIntegerField(default=1)
 
 	class Meta:
 		ordering = ('ordering', 'id')
+
+	@property
+	def display_url(self):
+		if self.image_url:
+			return self.image_url
+		return self.image.url if self.image else ''
 
 	def __str__(self):
 		return f"Homepage hero slide {self.ordering}"

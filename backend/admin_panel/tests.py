@@ -1,6 +1,7 @@
 from decimal import Decimal
 from io import BytesIO
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from commissions.models import CommissionLog
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -122,7 +123,17 @@ class HomepageHeroSlidesAdminTests(TestCase):
         'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
         'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
     })
-    def test_admin_uploads_orders_and_removes_homepage_hero_slides(self):
+    @patch('admin_panel.views.delete_cloudinary_image')
+    @patch('admin_panel.views.upload_images_to_cloudinary')
+    def test_admin_uploads_orders_and_removes_homepage_hero_slides(self, upload_images, delete_image):
+        assets = [
+            {
+                'url': f'https://res.cloudinary.com/test-cloud/image/upload/homepage/hero-{index}.jpg',
+                'public_id': f'shopverse/homepage/hero-{index}',
+            }
+            for index in range(1, 4)
+        ]
+        upload_images.side_effect = [assets, [], []]
         with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
             response = self.client.post(self.url, {
                 'action': 'hero_save',
@@ -139,6 +150,15 @@ class HomepageHeroSlidesAdminTests(TestCase):
 
             slides = list(HomepageHeroSlide.objects.all())
             self.assertEqual(len(slides), 3)
+            self.assertEqual(
+                [slide.image_url for slide in slides],
+                [asset['url'] for asset in assets],
+            )
+            self.assertEqual(
+                [slide.image_public_id for slide in slides],
+                [asset['public_id'] for asset in assets],
+            )
+            self.assertEqual(upload_images.call_args.kwargs['folder'], 'shopverse/homepage/hero')
             response = self.client.post(self.url, {
                 'action': 'hero_save',
                 'hero_badge': 'Test badge',
@@ -154,7 +174,7 @@ class HomepageHeroSlidesAdminTests(TestCase):
             ordered_slides = list(HomepageHeroSlide.objects.all())
             self.assertEqual(
                 homepage.context['hero_images'],
-                [slide.image.url for slide in ordered_slides],
+                [slide.display_url for slide in ordered_slides],
             )
             self.assertEqual(ordered_slides[0].id, slides[1].id)
             self.assertContains(homepage, 'data-home-hero-slide')
@@ -169,6 +189,7 @@ class HomepageHeroSlidesAdminTests(TestCase):
             })
             self.assertRedirects(response, self.url)
             self.assertEqual(HomepageHeroSlide.objects.count(), 2)
+            delete_image.assert_called_once_with('shopverse/homepage/hero-2')
 
 
 class AdminProfileTests(TestCase):

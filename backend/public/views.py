@@ -70,7 +70,7 @@ def home(request):
     marketplace_settings, _ = MarketplaceSettings.objects.get_or_create(pk=1)
     hero_slides = list(HomepageHeroSlide.objects.all())
     if hero_slides:
-        hero_images = [slide.image.url for slide in hero_slides]
+        hero_images = [slide.display_url for slide in hero_slides]
     elif marketplace_settings.hero_image:
         hero_images = [marketplace_settings.hero_image.url]
     else:

@@ -1,13 +1,16 @@
 import json
 import csv
+import logging
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.contrib import messages
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Sum, Count, Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
+from cloudinary.exceptions import Error as CloudinaryError
 
 from users.models import User, Address
 from sellers.models import SellerProfile, PayoutRequest, SellerRegistrationApplication
@@ -36,8 +39,11 @@ from offers.models import OfferBanner
 from reviews.models import Review
 from support.models import SupportTicket
 from notifications.models import Notification
+from products.image_storage import delete_cloudinary_image, upload_images_to_cloudinary
 from .forms import FAQItemForm, FeaturedProductsForm, HomepageHeroSlidesForm, MarketplaceContentForm, MarketplaceSettingsForm
 from .models import FAQItem, HomepageHeroSlide, MarketplaceSettings
+
+logger = logging.getLogger(__name__)
 
 
 def _is_valid_kyc_pdf(upload):
@@ -1336,6 +1342,7 @@ def marketplace_content(request):
             return redirect('admin_panel:marketplace_content')
         if action == 'hero_save':
             hero_slides_form = HomepageHeroSlidesForm(request.POST, request.FILES)
+            uploaded_assets = None
             remove_slide_ids = set(request.POST.getlist('remove_hero_slides'))
             removed_slides = [slide for slide in hero_slides if str(slide.pk) in remove_slide_ids]
             retained_slides = [slide for slide in hero_slides if str(slide.pk) not in remove_slide_ids]
@@ -1351,6 +1358,20 @@ def marketplace_content(request):
                     hero_slides_form.add_error('hero_images', 'Keep no more than 10 hero images in the slideshow.')
 
             if hero_slides_form.is_valid():
+                try:
+                    uploaded_assets = upload_images_to_cloudinary(
+                        hero_slides_form.cleaned_data['hero_images'],
+                        folder='shopverse/homepage/hero',
+                    )
+                except (CloudinaryError, ImproperlyConfigured):
+                    logger.exception('Could not upload homepage hero images to Cloudinary.')
+                    messages.error(request, 'Homepage hero images could not be uploaded. Please try again.')
+                    uploaded_assets = None
+
+            if not hero_slides_form.is_valid():
+                messages.error(request, 'Please correct the hero slideshow images.')
+
+            if hero_slides_form.is_valid() and uploaded_assets is not None:
                 for slide in removed_slides:
                     slide.image.delete(save=False)
                     slide.delete()
@@ -1382,14 +1403,30 @@ def marketplace_content(request):
                 elif remove_legacy_image and marketplace_settings.hero_image:
                     marketplace_settings.hero_image.delete(save=False)
 
-                for image in hero_slides_form.cleaned_data['hero_images']:
-                    HomepageHeroSlide.objects.create(image=image, ordering=next_order)
+                for asset in uploaded_assets:
+                    HomepageHeroSlide.objects.create(
+                        image_url=asset['url'],
+                        image_public_id=asset['public_id'],
+                        ordering=next_order,
+                    )
                     next_order += 1
 
                 marketplace_settings.save()
+                for slide in removed_slides:
+                    if slide.image_public_id:
+                        try:
+                            delete_cloudinary_image(slide.image_public_id)
+                        except (CloudinaryError, ImproperlyConfigured):
+                            logger.exception(
+                                'Could not remove homepage hero image %s from Cloudinary.',
+                                slide.image_public_id,
+                            )
+                            messages.warning(
+                                request,
+                                'Homepage updated, but an old hero image could not be removed from Cloudinary.',
+                            )
                 messages.success(request, 'Homepage hero slideshow updated successfully.')
                 return redirect('admin_panel:marketplace_content')
-            messages.error(request, 'Please correct the hero slideshow images.')
         if action == 'featured_products_save':
             featured_product_code_rows = request.POST.getlist('item_codes')
             featured_products_data = request.POST.copy()
