@@ -11,8 +11,9 @@ from PIL import Image
 
 from categories.models import Brand, Category, SubCategory
 from notifications.models import Notification
-from orders.models import Order
+from orders.models import Order, OrderItem
 from products.models import Product, ProductImage
+from returns.models import ReturnRequest
 from sellers.models import PayoutRequest, SellerProductOffer, SellerProfile
 from users.models import User
 
@@ -21,6 +22,84 @@ def make_image_upload(name):
 	buffer = BytesIO()
 	Image.new('RGB', (2, 2), color='red').save(buffer, format='PNG')
 	return SimpleUploadedFile(name, buffer.getvalue(), content_type='image/png')
+
+
+class SellerReturnPickupTests(TestCase):
+	def setUp(self):
+		seller_user = User.objects.create_user(
+			username='return-pickup-seller',
+			password='test-password',
+			role='seller',
+		)
+		seller = SellerProfile.objects.create(
+			user=seller_user,
+			store_name='Return Pickup Store',
+			store_slug='return-pickup-store',
+			phone='9876543210',
+			email='return-pickup@example.com',
+			business_address='Test seller address',
+		)
+		customer = User.objects.create_user(
+			username='return-pickup-customer',
+			password='test-password',
+			role='customer',
+		)
+		product = Product.objects.create(
+			seller=seller,
+			title='Return Pickup Product',
+			slug='return-pickup-product',
+			sku='RETURN-PICKUP-SKU',
+			item_code='RETURN-PICKUP-CODE',
+			description='Product for return pickup tests',
+			base_price=100,
+			selling_price=120,
+		)
+		order = Order.objects.create(
+			order_number='RETURN-PICKUP-ORDER',
+			customer=customer,
+			seller=seller,
+			shipping_address='Test customer address',
+		)
+		item = OrderItem.objects.create(
+			order=order,
+			product=product,
+			quantity=1,
+			unit_price=120,
+			total_price=120,
+		)
+		self.return_request = ReturnRequest.objects.create(
+			order=order,
+			order_item=item,
+			customer=customer,
+			reason='defective',
+			status='approved',
+		)
+		self.client.force_login(seller_user)
+
+	def test_manual_pickup_can_be_scheduled_without_a_partner(self):
+		response = self.client.post(reverse('seller:returns'), {
+			'return_id': self.return_request.id,
+			'decision': 'schedule_pickup',
+			'pickup_partner_id': '',
+			'pickup_tracking_id': 'MANUAL-RETURN-PICKUP',
+		})
+
+		self.assertRedirects(response, reverse('seller:returns'))
+		self.return_request.refresh_from_db()
+		self.assertEqual(self.return_request.status, 'pickup_scheduled')
+		self.assertIsNone(self.return_request.pickup_partner)
+		self.assertEqual(self.return_request.pickup_tracking_id, 'MANUAL-RETURN-PICKUP')
+
+	def test_invalid_pickup_partner_id_does_not_raise_server_error(self):
+		response = self.client.post(reverse('seller:returns'), {
+			'return_id': self.return_request.id,
+			'decision': 'schedule_pickup',
+			'pickup_partner_id': 'not-a-number',
+		})
+
+		self.assertRedirects(response, reverse('seller:returns'))
+		self.return_request.refresh_from_db()
+		self.assertEqual(self.return_request.status, 'approved')
 
 
 class SellerEarningsTests(TestCase):

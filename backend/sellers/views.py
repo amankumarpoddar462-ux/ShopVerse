@@ -633,9 +633,18 @@ def returns(request):
             elif decision == 'picked_up':
                 mark_picked_up(ret.id)
             elif decision == 'schedule_pickup':
-                pickup_partner = DeliveryPartnerProfile.objects.filter(
-                    id=request.POST.get('pickup_partner_id'), is_approved=True,
-                ).first()
+                pickup_partner_id = request.POST.get('pickup_partner_id', '').strip()
+                if pickup_partner_id and not (
+                    pickup_partner_id.isascii() and pickup_partner_id.isdigit()
+                ):
+                    raise ReturnValidationError('Choose a valid pickup partner.')
+                pickup_partner = None
+                if pickup_partner_id:
+                    pickup_partner = DeliveryPartnerProfile.objects.filter(
+                        id=pickup_partner_id, is_approved=True,
+                    ).first()
+                    if pickup_partner is None:
+                        raise ReturnValidationError('The selected pickup partner is unavailable.')
                 schedule_pickup(
                     ret.id, pickup_partner=pickup_partner,
                     tracking_id=request.POST.get('pickup_tracking_id', ''),
