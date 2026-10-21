@@ -1,9 +1,16 @@
 import os
 import logging
 
-import cloudinary
-import cloudinary.uploader
-from cloudinary.exceptions import Error as CloudinaryError
+try:
+    import cloudinary
+    import cloudinary.uploader
+    from cloudinary.exceptions import Error as CloudinaryError
+except ImportError:  # pragma: no cover - fallback for environments without Cloudinary.
+    cloudinary = None
+    CloudinaryError = Exception
+    cloudinary_uploader = None
+else:
+    cloudinary_uploader = cloudinary.uploader
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from PIL import Image, UnidentifiedImageError
 
@@ -14,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 def _configure_cloudinary():
+    if cloudinary is None:
+        raise ImproperlyConfigured(
+            'Cloudinary is not installed. Install the cloudinary package or set up the required image service.'
+        )
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
     api_key = os.environ.get('CLOUDINARY_API_KEY')
     api_secret = os.environ.get('CLOUDINARY_API_SECRET')
@@ -69,7 +80,7 @@ def upload_images_to_cloudinary(uploaded_files, folder):
     try:
         for uploaded_file in uploaded_files:
             uploaded_file.seek(0)
-            result = cloudinary.uploader.upload(
+            result = cloudinary_uploader.upload(
                 uploaded_file,
                 folder=folder,
                 resource_type='image',
@@ -83,7 +94,7 @@ def upload_images_to_cloudinary(uploaded_files, folder):
     except CloudinaryError:
         for asset in uploaded_assets:
             try:
-                cloudinary.uploader.destroy(asset['public_id'], resource_type='image')
+                cloudinary_uploader.destroy(asset['public_id'], resource_type='image')
             except CloudinaryError:
                 logger.exception('Failed to clean up incomplete Cloudinary upload %s.', asset['public_id'])
         raise
@@ -98,7 +109,7 @@ def delete_cloudinary_image(public_id):
     if not public_id:
         return
     _configure_cloudinary()
-    result = cloudinary.uploader.destroy(
+    result = cloudinary_uploader.destroy(
         public_id,
         resource_type='image',
         invalidate=True,

@@ -3,7 +3,10 @@ import json
 import logging
 from uuid import uuid4
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from cloudinary.exceptions import Error as CloudinaryError
+try:
+    from cloudinary.exceptions import Error as CloudinaryError
+except ImportError:  # pragma: no cover - fallback for missing Cloudinary dependency.
+    CloudinaryError = Exception
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required

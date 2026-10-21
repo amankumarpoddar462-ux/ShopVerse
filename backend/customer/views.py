@@ -7,7 +7,10 @@ from collections import OrderedDict
 import razorpay
 from decimal import Decimal
 from django.conf import settings as django_settings
-from cloudinary.exceptions import Error as CloudinaryError
+try:
+    from cloudinary.exceptions import Error as CloudinaryError
+except ImportError:  # pragma: no cover - fallback for missing Cloudinary dependency.
+    CloudinaryError = Exception
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.files.storage import default_storage
 from django.http import HttpResponseForbidden, JsonResponse

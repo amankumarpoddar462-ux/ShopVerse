@@ -10,7 +10,10 @@ from django.db.models import Sum, Count, Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
-from cloudinary.exceptions import Error as CloudinaryError
+try:
+    from cloudinary.exceptions import Error as CloudinaryError
+except ImportError:  # pragma: no cover - fallback for missing Cloudinary dependency.
+    CloudinaryError = Exception
 
 from users.models import User, Address
 from sellers.models import SellerProfile, PayoutRequest, SellerRegistrationApplication
