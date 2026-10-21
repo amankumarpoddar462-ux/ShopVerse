@@ -2858,7 +2858,7 @@ body.dark-theme .product-action-btn.wishlist-btn.in-wishlist i {
         order: 4;
         flex: 1 0 100% !important;
         width: 100% !important;
-        max-width: none !important;
+        max-width: none;
         min-width: 0;
         margin: 0;
     }
