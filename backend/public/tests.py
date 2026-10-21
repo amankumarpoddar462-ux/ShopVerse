@@ -5,6 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from sellers.models import SellerRegistrationApplication
 from delivery.models import DeliveryPartnerApplication
 from categories.models import Category
+from admin_panel.models import HomepageHeroSlide
 from users.models import User
 
 
@@ -111,3 +112,22 @@ class HomepageCategoryTests(TestCase):
         self.assertEqual(len(response.context['categories']), 10)
         self.assertContains(response, categories[9].name)
         self.assertNotContains(response, categories[10].name)
+
+    def test_homepage_renders_cloudinary_hero_slide(self):
+        slide = HomepageHeroSlide.objects.create(
+            image_url='https://res.cloudinary.com/test-cloud/image/upload/homepage/hero.jpg',
+            image_public_id='shopverse/homepage/hero',
+        )
+
+        response = self.client.get(reverse('public:home'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, slide.image_url)
+
+    def test_login_uses_google_oauth_without_emulating_google_account_picker(self):
+        response = self.client.get(reverse('users:login'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="/auth/google-login/"')
+        self.assertNotContains(response, 'googleAccountModal')
+        self.assertNotContains(response, 'amankumarpoddar462@gmail.com')

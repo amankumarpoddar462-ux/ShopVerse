@@ -1489,6 +1489,12 @@ body.dark-theme .kpi-card.primary {
 }
 
 /* Responsive Fixes */
+@media (min-width: 769px) {
+    .orders-date-filter {
+        margin-top: 24px;
+    }
+}
+
 @media (max-width: 768px) {
     .customer-order-card {
         padding: 14px !important;

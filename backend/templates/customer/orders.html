@@ -5,7 +5,7 @@
 {% block page_subtitle %}Track shipments, download tax invoices, and manage returns/replacements{% endblock %}
 
 {% block panel_content %}
-<form method="GET" action="/customer/orders/" class="glass-card" style="display: flex; align-items: end; gap: 12px; flex-wrap: wrap; padding: 16px 20px; margin-bottom: 16px;">
+<form method="GET" action="/customer/orders/" class="glass-card orders-date-filter" style="display: flex; align-items: end; gap: 12px; flex-wrap: wrap; padding: 16px 20px; margin-bottom: 16px;">
     {% if selected_status %}<input type="hidden" name="status" value="{{ selected_status }}">{% endif %}
     <label style="display: grid; gap: 5px; color: var(--text-secondary); font-size: 0.82rem; font-weight: 600;">
         Year
