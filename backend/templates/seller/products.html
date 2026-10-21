@@ -116,23 +116,30 @@
     const categoryFilter = productFilters.elements.category;
     const subcategoryFilter = productFilters.elements.subcategory;
     const brandFilter = productFilters.elements.brand;
+    const allSubcategoryOptions = [...subcategoryFilter.options].slice(1).map((option) => option.cloneNode(true));
+    const allBrandOptions = [...brandFilter.options].slice(1).map((option) => option.cloneNode(true));
     let filterRequest;
+    const resetOptions = (select, placeholder, options) => {
+        select.replaceChildren(new Option(placeholder, ''), ...options);
+    };
     const updateDependentOptions = () => {
         const categoryId = categoryFilter.value;
-        const subcategoryOptions = [...subcategoryFilter.options].slice(1);
-        subcategoryOptions.forEach((option) => {
-            option.hidden = Boolean(categoryId && option.dataset.categoryId !== categoryId);
-        });
-        if (subcategoryFilter.selectedOptions[0]?.hidden) subcategoryFilter.value = '';
+        const selectedSubcategory = subcategoryFilter.value;
+        const subcategoryOptions = allSubcategoryOptions.filter(
+            (option) => !categoryId || option.dataset.categoryId === categoryId
+        );
+        const validSubcategory = subcategoryOptions.some((option) => option.value === selectedSubcategory);
+        resetOptions(subcategoryFilter, 'All Subcategories', subcategoryOptions);
+        subcategoryFilter.value = validSubcategory ? selectedSubcategory : '';
 
         const activeSubcategoryId = subcategoryFilter.value;
-        const brandOptions = [...brandFilter.options].slice(1);
-        brandOptions.forEach((option) => {
-            option.hidden = !activeSubcategoryId || option.dataset.subcategoryId !== activeSubcategoryId;
-        });
+        const brandOptions = activeSubcategoryId
+            ? allBrandOptions.filter((option) => option.dataset.subcategoryId === activeSubcategoryId)
+            : [];
+        const selectedBrand = brandFilter.value;
+        resetOptions(brandFilter, activeSubcategoryId ? 'All Brands' : 'Select Subcategory First', brandOptions);
         brandFilter.disabled = !activeSubcategoryId;
-        brandFilter.options[0].textContent = activeSubcategoryId ? 'All Brands' : 'Select Subcategory First';
-        if (brandFilter.selectedOptions[0]?.hidden) brandFilter.value = '';
+        brandFilter.value = brandOptions.some((option) => option.value === selectedBrand) ? selectedBrand : '';
     };
     const updateSelectionModeCells = () => {
         const enabled = toggleProductSelection.getAttribute('aria-pressed') === 'true';
